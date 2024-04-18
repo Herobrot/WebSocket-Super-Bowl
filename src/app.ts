@@ -68,6 +68,12 @@ wss.on('connection', async (ws) => {
 
             if(data instanceof PageFetch) {
                 connections.set(currentUserId, ws);
+                if (currentUserId instanceof Object){
+                    signale.info("Conección guardada => " + JSON.stringify(currentUserId));
+                } else{
+                    signale.info("Conección guardada => " + currentUserId);
+                }
+                
             }
     
             if(data instanceof IUser) {
@@ -82,11 +88,12 @@ wss.on('connection', async (ws) => {
                 await new Posts(newPost).save();
     
                 connections.forEach((client, clientId) => {
-                    if(client.readyState === WebSocket.OPEN) {
+                    if(client.readyState === WebSocket.OPEN) {                        
                         client.send(JSON.stringify({
                             update: true,
                             message: "Se ha actualizado la base de datos"
                         }));
+                        signale.success("Enviado a los clientes");
                     }
                 });
             }
