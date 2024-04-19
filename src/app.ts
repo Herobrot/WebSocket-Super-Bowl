@@ -40,7 +40,6 @@ wss.on('connection', async (ws) => {
     ws.on('message', async (rawData: any) => {
         try{
             const data = JSON.parse(rawData);
-            console.log(data);
             signale.warn("Recibido => " + rawData);
             let object;
 
@@ -67,7 +66,7 @@ wss.on('connection', async (ws) => {
                     laughs: 0
                 }
                 if(newPost){
-                    signale.warn("Enviando => " + JSON.stringify(newPost));
+                    signale.info("Enviando => " + JSON.stringify(newPost));
                     await new Posts(newPost).save();
                 }
     
