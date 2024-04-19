@@ -73,10 +73,7 @@ wss.on('connection', async (ws) => {
     
                 connections.forEach((client, clientId) => {
                     if(client.readyState === WebSocket.OPEN) {                        
-                        client.send(JSON.stringify({
-                            update: true,
-                            message: "Se ha actualizado la base de datos"
-                        }));
+                        client.send(newPost);
                         signale.success("Enviado a los clientes");
                     }
                 });                
