@@ -89,6 +89,7 @@ wss.on('connection', async (ws) => {
             }
         } catch (error) {
             signale.error(new Error("Error al procesar el mensaje para los clientes (WS):"));
+            console.log(error);
         }
     });
 
