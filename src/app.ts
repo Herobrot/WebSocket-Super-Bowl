@@ -72,7 +72,7 @@ wss.on('connection', async (ws) => {
     
                 connections.forEach((client, clientId) => {
                     if(client.readyState === WebSocket.OPEN) {                        
-                        client.send(newPost);
+                        client.send(JSON.stringify(newPost));
                         signale.success("Enviado a los clientes");
                     }
                 });                
@@ -89,6 +89,7 @@ wss.on('connection', async (ws) => {
             }
         } catch (error) {
             signale.error(new Error("Error al procesar el mensaje para los clientes (WS):"));
+            console.log(error);
         }
     });
 
