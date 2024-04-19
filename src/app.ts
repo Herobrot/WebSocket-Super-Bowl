@@ -6,6 +6,7 @@ import WebSocket from "ws";
 import "dotenv/config";
 import mongoose from "mongoose";
 import http from "http";
+import { Post } from "./models/publicationSchema";
 
 const app = express();
 const uri = process.env.MONGODB_URI!;
@@ -57,6 +58,7 @@ wss.on('connection', async (ws) => {
             }
 
             if(object.hasOwnProperty('_id') && object.hasOwnProperty('kit')) {
+                let objectCreated: Post;
                 const newPost = {
                     imageUrl: object.kit.imageUrl,
                     title: 'Imagen generada con KIT: ' + JSON.stringify(object.kit.id),
@@ -67,12 +69,14 @@ wss.on('connection', async (ws) => {
                 }
                 if(newPost){
                     signale.info("Enviando => " + JSON.stringify(newPost));
-                    await new Posts(newPost).save();
+                    const object = new Posts(newPost);
+                    await object.save()
+                    objectCreated = object;
                 }
     
                 connections.forEach((client, clientId) => {
                     if(client.readyState === WebSocket.OPEN) {                        
-                        client.send(JSON.stringify(newPost));
+                        client.send(JSON.stringify(objectCreated));
                         signale.success("Enviado a los clientes");
                     }
                 });                

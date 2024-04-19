@@ -1,5 +1,5 @@
 import { model, Schema, Types } from "mongoose";
-class Post {
+export class Post {
     constructor(
         readonly imageUrl: string,
         readonly title: string,
