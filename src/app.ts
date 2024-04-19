@@ -33,59 +33,43 @@ import { Posts } from "./models/publicationSchema";
 
 const pendingRequests = new Map();
 const connections = new Map();
-let ids = [];
-
-type Kit = {
-    _id: string | object,
-    nickname?: string,
-    imageUrl: string[]
-}
-
-class IUser {
-    constructor(
-        readonly _id: string | object,
-        readonly nickname: string,
-        readonly password: string,
-        readonly kits: Kit[]
-    ){}
-}
-
-class PageFetch {
-    constructor(
-        readonly id: string | object
-    ){}
-}
 
 wss.on('connection', async (ws) => {
     let currentUserId: string | object;
-
 
     ws.on('message', async (rawData: any) => {
         try{
             const data = JSON.parse(rawData);
             console.log(data);
             signale.warn("Recibido => " + rawData);
+            let object;
 
-            if(data instanceof PageFetch) {
-                connections.set(currentUserId, ws);
-                if (currentUserId instanceof Object){
-                    signale.info("Conección guardada => " + JSON.stringify(currentUserId));
-                } else{
-                    signale.info("Conección guardada => " + currentUserId);
-                }
-                
+            if(!data.kit){
+                object = {
+                    _id: data._id
+                };
             }
-    
-            if(data instanceof IUser) {
+
+            else{
+                object = {
+                    _id: data._id,
+                    kit: data.kit
+                };
+            }
+
+            if(object.hasOwnProperty('_id') && object.hasOwnProperty('kit')) {
                 const newPost = {
-                    imageUrl: data.kits[0].imageUrl,
-                    title: 'Imagen generada con KIT: ' + JSON.stringify(data.kits[0]._id),
+                    imageUrl: object.kit.imageUrl,
+                    title: 'Imagen generada con KIT: ' + JSON.stringify(object.kit.id),
                     content: ("Fecha: " + new Date().toLocaleDateString('es-MX')),
-                    _idUser: data._id,
+                    _idUser: object._id,
                     likes: 0,
                     laughs: 0
                 }
-                await new Posts(newPost).save();
+                if(newPost){
+                    signale.warn("Enviando => " + JSON.stringify(newPost));
+                    await new Posts(newPost).save();
+                }
     
                 connections.forEach((client, clientId) => {
                     if(client.readyState === WebSocket.OPEN) {                        
@@ -95,7 +79,17 @@ wss.on('connection', async (ws) => {
                         }));
                         signale.success("Enviado a los clientes");
                     }
-                });
+                });                
+            }
+    
+            else if(object.hasOwnProperty('_id')) {
+                currentUserId = object._id;
+                connections.set(currentUserId, ws);
+                if (currentUserId instanceof Object){
+                    signale.info("Conección guardada => " + JSON.stringify(currentUserId));
+                } else{
+                    signale.info("Conección guardada => " + currentUserId);
+                }
             }
         } catch (error) {
             signale.error(new Error("Error al procesar el mensaje para los clientes (WS):"));
