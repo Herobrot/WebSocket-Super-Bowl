@@ -6,7 +6,7 @@ import WebSocket from "ws";
 import "dotenv/config";
 import mongoose from "mongoose";
 import http from "http";
-import { Post } from "./models/publicationSchema";
+import { Post, Posts } from "./models/publicationSchema";
 
 const app = express();
 const uri = process.env.MONGODB_URI!;
@@ -30,8 +30,6 @@ app.use(express.json());
 app.use(cors());
 app.use(morgan("dev"));
 
-import { Posts } from "./models/publicationSchema";
-
 const pendingRequests = new Map();
 const connections = new Map();
 
@@ -44,9 +42,15 @@ wss.on('connection', async (ws) => {
             signale.warn("Recibido => " + rawData);
             let object;
 
-            if(!data.kit){
+            if(!data.kit && !data.distance){
                 object = {
                     _id: data._id
+                };
+            }
+
+            else if(!data.kit && data.distance){
+                object = {
+                    distance: data.distance
                 };
             }
 
@@ -71,7 +75,15 @@ wss.on('connection', async (ws) => {
                     signale.info("Enviando => " + JSON.stringify(newPost));
                     const object = new Posts(newPost);
                     await object.save()
-                    objectCreated = object;
+                    objectCreated = {
+                        _id: object._id,
+                        imageUrl: object.imageUrl,
+                        title: object.title,
+                        content: object.content,
+                        _idUser: object._idUser,
+                        likes: 0,
+                        laughs: 0
+                    };
                 }
     
                 connections.forEach((client, clientId) => {
@@ -81,12 +93,24 @@ wss.on('connection', async (ws) => {
                     }
                 });                
             }
+
+            else if(object.hasOwnProperty('distance')) {
+                const request = {
+                    distance: object.distance
+                }
+                
+                connections.forEach((client, clientId) => {
+                    if(client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify(request));
+                    }
+                })
+            }
     
             else if(object.hasOwnProperty('_id')) {
                 currentUserId = object._id;
                 connections.set(currentUserId, ws);
                 if (currentUserId instanceof Object){
-                    signale.info("Conección guardada => " + JSON.stringify(currentUserId));
+                    signale.info("Conección guardada [Object] => " + JSON.stringify(currentUserId));
                 } else{
                     signale.info("Conección guardada => " + currentUserId);
                 }
