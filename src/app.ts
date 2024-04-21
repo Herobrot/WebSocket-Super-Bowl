@@ -101,6 +101,7 @@ wss.on('connection', async (ws) => {
                 
                 connections.forEach((client, clientId) => {
                     if(client.readyState === WebSocket.OPEN) {
+                        console.log(request);
                         client.send(JSON.stringify(request));
                     }
                 })
