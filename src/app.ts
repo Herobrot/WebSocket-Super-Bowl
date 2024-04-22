@@ -6,7 +6,7 @@ import WebSocket from "ws";
 import "dotenv/config";
 import mongoose from "mongoose";
 import http from "http";
-import { Post, Posts } from "./models/publicationSchema";
+import { Posts } from "./models/publicationSchema";
 
 const app = express();
 const uri = process.env.MONGODB_URI!;
@@ -40,112 +40,57 @@ wss.on('connection', async (ws) => {
         try{
             const data = JSON.parse(rawData);
             signale.warn("Recibido => " + rawData);
-            let object;
 
-            if(!data.kit && !data.distance){
-                object = {
-                    _id: data._id
-                };
-            }
-
-            else if(!data.kit && data.distance){
-                object = {
-                    distance: data.distance
-                };
-            }
-
-            else if(data.kit && !data.distance){
-                object = {
-                    kit: {
-                        id: data.kit.id
-                    }
-                };
-            }
-
-            else if(data._id && data.kit && data.message){
-                object = {
-                    _id: data._id,
-                    kit: data.kit,
-                    message: data.message
-                }
-            }
-
-            else{
-                object = {
-                    _id: data._id,
-                    kit: data.kit
-                };
-            }
-
-            if(object.hasOwnProperty('_id') && object.hasOwnProperty('kit') && object.hasOwnProperty('message')) {
-                const request = {
-                    _id: object._id,
-                    kit: object.kit,
-                    message: object.message
-                }
-                
-                connections.forEach((client, clientId) => {
-                    if(client.readyState === WebSocket.OPEN) {
-                        console.log(request);
-                        client.send(JSON.stringify(request));
-                    }
-                })
-            }
-
-            else if(object.hasOwnProperty('_id') && object.hasOwnProperty('kit')) {
-                let objectCreated: Post;
+            if (data._id && data.kit) {
                 const newPost = {
-                    imageUrl: object.kit.imageUrl,
-                    title: 'Imagen generada con KIT: ' + JSON.stringify(object.kit.id),
+                    imageUrl: data.kit.imageUrl,
+                    title: 'Imagen generada con KIT: ' + JSON.stringify(data.kit.id),
                     content: ("Fecha: " + new Date().toLocaleDateString('es-MX')),
-                    _idUser: object._id,
+                    _idUser: data._id,
                     likes: 0,
                     laughs: 0
                 }
-                if(newPost){
-                    signale.info("Enviando => " + JSON.stringify(newPost));
-                    const object = new Posts(newPost);
-                    await object.save()
-                    objectCreated = {
-                        _id: object._id,
-                        imageUrl: object.imageUrl,
-                        title: object.title,
-                        content: object.content,
-                        _idUser: object._idUser,
-                        likes: 0,
-                        laughs: 0
-                    };
-                }
-    
+                const objectCreated = await (new Posts(newPost).save());
                 connections.forEach((client, clientId) => {
-                    if(client.readyState === WebSocket.OPEN) {                        
-                        client.send(JSON.stringify(objectCreated));
-                        signale.success("Enviado a los clientes");
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            _id: objectCreated._id,
+                            imageUrl: objectCreated.imageUrl,
+                            title: objectCreated.title,
+                            content: objectCreated.content,
+                            _idUser: objectCreated._idUser,
+                            likes: 0,
+                            laughs: 0
+                        }));
                     }
-                });                
-            }
+                });
 
-            else if(object.hasOwnProperty('distance')) {
-                const request = {
-                    distance: object.distance
-                }
-                
+            } else if (data._id && data.distance && data.id) {
                 connections.forEach((client, clientId) => {
-                    if(client.readyState === WebSocket.OPEN) {
-                        console.log(request);
-                        client.send(JSON.stringify(request));
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            id: data.id,
+                            distance: data.distance
+                        }));
                     }
-                })
-            }
-    
-            else if(object.hasOwnProperty('_id')) {
-                currentUserId = object._id;
-                connections.set(currentUserId, ws);
-                if (currentUserId instanceof Object){
-                    signale.info("Conección guardada [Object] => " + JSON.stringify(currentUserId));
-                } else{
-                    signale.info("Conección guardada => " + currentUserId);
+                });
+
+            } else if(data.idKit && data.distance) {
+                const objectToSend = {
+                    idKit: data.idKit,
+                    distance: data.distance
                 }
+                pendingRequests.set(data.idKit, objectToSend);
+                connections.forEach((client, clientId) => {
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify(objectToSend));
+                    }
+                });
+            } else if (data._id) {
+                currentUserId = data._id;
+                connections.set(currentUserId, ws);
+                signale.info("Conección guardada => " + JSON.stringify(currentUserId));
+
             }
         } catch (error) {
             signale.error(new Error("Error al procesar el mensaje para los clientes (WS):"));
