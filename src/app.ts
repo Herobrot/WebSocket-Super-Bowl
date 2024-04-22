@@ -54,6 +54,22 @@ wss.on('connection', async (ws) => {
                 };
             }
 
+            else if(data.kit && !data.distance){
+                object = {
+                    kit: {
+                        id: data.kit.id
+                    }
+                };
+            }
+
+            else if(data._id && data.kit && data.message){
+                object = {
+                    _id: data._id,
+                    kit: data.kit,
+                    message: data.message
+                }
+            }
+
             else{
                 object = {
                     _id: data._id,
@@ -61,7 +77,22 @@ wss.on('connection', async (ws) => {
                 };
             }
 
-            if(object.hasOwnProperty('_id') && object.hasOwnProperty('kit')) {
+            if(object.hasOwnProperty('_id') && object.hasOwnProperty('kit') && object.hasOwnProperty('message')) {
+                const request = {
+                    _id: object._id,
+                    kit: object.kit,
+                    message: object.message
+                }
+                
+                connections.forEach((client, clientId) => {
+                    if(client.readyState === WebSocket.OPEN) {
+                        console.log(request);
+                        client.send(JSON.stringify(request));
+                    }
+                })
+            }
+
+            else if(object.hasOwnProperty('_id') && object.hasOwnProperty('kit')) {
                 let objectCreated: Post;
                 const newPost = {
                     imageUrl: object.kit.imageUrl,
